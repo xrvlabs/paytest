@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aurora Pay - Gateway Integration Tester</title>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+    <style>
+        :root {
+            --bg: #0b0f19;
+            --card-bg: rgba(255, 255, 255, 0.05);
+            --border: rgba(255, 255, 255, 0.1);
+            --accent: #00c8ff;
+            --accent-glow: rgba(0, 200, 255, 0.3);
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --text: #f3f4f6;
+            --muted: #9ca3af;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, sans-serif; }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(0, 200, 255, 0.08) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(239, 68, 68, 0.08) 0%, transparent 40%);
+        }
+
+        .container {
+            width: 100%;
+            max-width: 900px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+
+        @media (max-width: 768px) {
+            .container { grid-template-columns: 1fr; }
+        }
+
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 24px;
+            backdrop-filter: blur(12px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        h2 { font-size: 1.25rem; font-weight: 700; margin-bottom: 6px; color: #fff; }
+        p.subtitle { font-size: 0.82rem; color: var(--muted); margin-bottom: 20px; }
+
+        .form-group { margin-bottom: 14px; }
+        label { display: block; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); margin-bottom: 6px; }
+        input {
+            width: 100%;
+            padding: 10px 14px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: #fff;
+            font-size: 0.9rem;
+            outline: none;
+            transition: all 0.2s;
+        }
+        input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+
+        .btn {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            background: linear-gradient(135deg, var(--accent), #3b82f6);
+            color: #fff;
+            font-weight: 700;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: opacity 0.2s;
+            margin-top: 10px;
+        }
+        .btn:hover { opacity: 0.9; }
+
+        /* QR & Payment Side */
+        .payment-box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            min-height: 380px;
+        }
+
+        .qr-frame {
+            background: #fff;
+            padding: 14px;
+            border-radius: 12px;
+            margin: 16px 0;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+            display: none;
+        }
+        .qr-frame canvas { display: block; }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            margin-top: 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border);
+        }
+        .status-PENDING { color: var(--warning); border-color: rgba(245, 158, 11, 0.3); background: rgba(245, 158, 11, 0.1); }
+        .status-SUCCESS { color: var(--success); border-color: rgba(16, 185, 129, 0.3); background: rgba(16, 185, 129, 0.1); }
+        .status-TAMPERED { color: var(--danger); border-color: rgba(239, 68, 68, 0.3); background: rgba(239, 68, 68, 0.1); }
+
+        .live-log {
+            width: 100%;
+            background: #050811;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 10px;
+            font-family: monospace;
+            font-size: 0.72rem;
+            color: #6ee7b7;
+            text-align: left;
+            margin-top: 16px;
+            max-height: 120px;
+            overflow-y: auto;
+        }
+
+        .empty-state { color: var(--muted); font-size: 0.85rem; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <!-- Left: Request Form -->
+    <div class="card">
+        <h2>⚡ Create Payment Request</h2>
+        <p class="subtitle">Client App / Website sending payment amount request</p>
+        
+        <form id="payForm">
+            <div class="form-group">
+                <label>Gateway Endpoint</label>
+                <input type="text" id="gatewayUrl" value="https://paytmgateway.dcodesharvi.workers.dev" required>
+            </div>
+
+            <div class="form-group">
+                <label>Payment Amount (₹)</label>
+                <input type="number" id="amount" step="0.01" value="1.00" placeholder="Enter amount e.g. 499.00" required style="font-size: 1.1rem; font-weight: 700; color: #7dd3fc;">
+            </div>
+
+            <button type="submit" class="btn">🚀 Request Payment QR (₹<span id="btnAmount">1.00</span>)</button>
+        </form>
+    </div>
+
+    <!-- Right: Generated QR & Live Verification Status -->
+    <div class="card payment-box">
+        <h2>📱 Scan & Pay</h2>
+        <p class="subtitle" id="paymentInstruction">Enter amount and click request</p>
+
+        <div class="empty-state" id="emptyState">
+            <div>📲</div>
+            <p>QR Code will be generated from Admin Panel Settings</p>
+        </div>
+
+        <div class="qr-frame" id="qrFrame">
+            <canvas id="qrCanvas"></canvas>
+        </div>
+
+        <div id="statusContainer" style="display:none;">
+            <div class="status-badge status-PENDING" id="statusBadge">● Waiting for Payment...</div>
+            <p style="font-size: 0.78rem; color: var(--muted); margin-top: 8px;">Auto-verifying status every 3 seconds...</p>
+        </div>
+
+        <div class="live-log" id="liveLog">Logs will appear here...</div>
+    </div>
+</div>
+
+<script>
+    // Auto generate Order ID
+    document.getElementById('orderId').value = 'ORD_' + Date.now().toString().slice(-6);
+
+    let pollInterval = null;
+
+    function log(msg) {
+        const logBox = document.getElementById('liveLog');
+        const time = new Date().toLocaleTimeString();
+        logBox.innerHTML += `<div>[${time}] ${msg}</div>`;
+        logBox.scrollTop = logBox.scrollHeight;
+    }
+
+    document.getElementById('amount').addEventListener('input', function(e) {
+        document.getElementById('btnAmount').innerText = parseFloat(e.target.value || 0).toFixed(2);
+    });
+
+    let currentMid = '';
+
+    document.getElementById('payForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const baseUrl = document.getElementById('gatewayUrl').value.replace(/\/$/, '');
+        const amount = parseFloat(document.getElementById('amount').value).toFixed(2);
+
+        log(`Sending amount request ₹${amount} to Gateway API (${baseUrl}/api/create-order)...`);
+
+        try {
+            // Call gateway backend API to create order & generate QR using Admin Panel settings
+            const apiRes = await fetch(`${baseUrl}/api/create-order`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ amount: amount })
+            });
+
+            const orderData = await apiRes.json();
+            if (!orderData.success) {
+                log(`❌ Failed to create payment order: ${orderData.message || 'Unknown error'}`);
+                return;
+            }
+
+            currentMid = orderData.mid;
+            const createdOrderId = orderData.order_id;
+            log(`✅ Gateway created Order #${createdOrderId} using Admin MID (${orderData.mid}) & UPI (${orderData.upi_id})`);
+
+            // Render QR Code Image returned by Gateway
+            document.getElementById('emptyState').style.display = 'none';
+            const qrFrame = document.getElementById('qrFrame');
+            qrFrame.style.display = 'block';
+            qrFrame.innerHTML = `<img src="${orderData.qr_image_url}" alt="UPI QR" style="width:200px; height:200px; display:block; border-radius:8px;">`;
+
+            document.getElementById('paymentInstruction').innerText = `Scan & pay ₹${amount} for Order #${createdOrderId} (${orderData.shop_name})`;
+            document.getElementById('statusContainer').style.display = 'block';
+
+            // Start polling verification status
+            startStatusPolling(baseUrl, currentMid, createdOrderId, amount);
+
+        } catch (err) {
+            log(`❌ Request Error: ${err.message}`);
+        }
+    });
+
+    function startStatusPolling(baseUrl, mid, orderId, amount) {
+        if (pollInterval) clearInterval(pollInterval);
+
+        log(`Started polling verification status every 3s...`);
+
+        pollInterval = setInterval(async () => {
+            try {
+                const res = await fetch(`${baseUrl}/api/check-status`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        mid: mid,
+                        order_id: orderId,
+                        expected_amount: amount
+                    })
+                });
+
+                const data = await res.json();
+                log(`Status Response: ${JSON.stringify(data)}`);
+
+                const badge = document.getElementById('statusBadge');
+
+                if (data.status === 'TXN_SUCCESS') {
+                    badge.className = 'status-badge status-SUCCESS';
+                    badge.innerText = '✅ Payment Verified Successfully!';
+                    log('🎉 Transaction verified! Payment Complete.');
+                    clearInterval(pollInterval);
+                } else if (data.status === 'TAMPERED_PARTIAL') {
+                    badge.className = 'status-badge status-TAMPERED';
+                    badge.innerText = `⚠️ Amount Tampered (Recv: ₹${data.received_amount})`;
+                    log('🚨 Warning: Tampered or Partial payment received!');
+                    clearInterval(pollInterval);
+                } else {
+                    badge.className = 'status-badge status-PENDING';
+                    badge.innerText = '● Pending payment scan...';
+                }
+            } catch (err) {
+                log(`Fetch error: ${err.message}`);
+            }
+        }, 3000);
+    }
+</script>
+
+</body>
+</html>
