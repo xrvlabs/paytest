@@ -3,15 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Aurora Pay - Gateway Integration Tester</title>
-    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+    <title>Aurora Pay · Scan & Pay</title>
     <style>
         :root {
-            --bg: #0b0f19;
-            --card-bg: rgba(255, 255, 255, 0.05);
+            --bg: #070913;
+            --card-bg: rgba(20, 25, 42, 0.7);
             --border: rgba(255, 255, 255, 0.1);
             --accent: #00c8ff;
-            --accent-glow: rgba(0, 200, 255, 0.3);
             --success: #10b981;
             --warning: #f59e0b;
             --danger: #ef4444;
@@ -19,7 +17,7 @@
             --muted: #9ca3af;
         }
 
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, sans-serif; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
 
         body {
             background-color: var(--bg);
@@ -30,267 +28,221 @@
             align-items: center;
             padding: 20px;
             background-image: 
-                radial-gradient(circle at 10% 20%, rgba(0, 200, 255, 0.08) 0%, transparent 40%),
-                radial-gradient(circle at 90% 80%, rgba(239, 68, 68, 0.08) 0%, transparent 40%);
+                radial-gradient(circle at 50% 20%, rgba(0, 200, 255, 0.12) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(239, 68, 68, 0.08) 0%, transparent 50%);
         }
 
-        .container {
+        .pay-card {
             width: 100%;
-            max-width: 900px;
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 24px;
-        }
-
-        @media (max-width: 768px) {
-            .container { grid-template-columns: 1fr; }
-        }
-
-        .card {
+            max-width: 400px;
             background: var(--card-bg);
             border: 1px solid var(--border);
-            border-radius: 16px;
-            padding: 24px;
-            backdrop-filter: blur(12px);
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            border-radius: 24px;
+            padding: 28px 24px;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+            text-align: center;
         }
 
-        h2 { font-size: 1.25rem; font-weight: 700; margin-bottom: 6px; color: #fff; }
-        p.subtitle { font-size: 0.82rem; color: var(--muted); margin-bottom: 20px; }
-
-        .form-group { margin-bottom: 14px; }
-        label { display: block; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); margin-bottom: 6px; }
-        input {
-            width: 100%;
-            padding: 10px 14px;
-            background: rgba(0, 0, 0, 0.3);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            color: #fff;
-            font-size: 0.9rem;
-            outline: none;
-            transition: all 0.2s;
-        }
-        input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
-
-        .btn {
-            width: 100%;
-            padding: 12px;
-            border: none;
-            border-radius: 8px;
-            background: linear-gradient(135deg, var(--accent), #3b82f6);
-            color: #fff;
-            font-weight: 700;
-            font-size: 0.9rem;
-            cursor: pointer;
-            transition: opacity 0.2s;
-            margin-top: 10px;
-        }
-        .btn:hover { opacity: 0.9; }
-
-        /* QR & Payment Side */
-        .payment-box {
+        .brand-header {
             display: flex;
-            flex-direction: column;
             align-items: center;
             justify-content: center;
-            text-align: center;
-            min-height: 380px;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+        .brand-icon {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, #00c8ff, #3b82f6);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+        }
+        .brand-name {
+            font-size: 1.1rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #fff, #93c5fd);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
         }
 
-        .qr-frame {
-            background: #fff;
-            padding: 14px;
-            border-radius: 12px;
-            margin: 16px 0;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.4);
-            display: none;
+        .amount-display {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 16px;
+            margin-bottom: 20px;
         }
-        .qr-frame canvas { display: block; }
+        .amount-label {
+            font-size: 0.72rem;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        .amount-val {
+            font-size: 2.2rem;
+            font-weight: 800;
+            color: #7dd3fc;
+        }
+
+        .qr-wrapper {
+            background: #ffffff;
+            padding: 14px;
+            border-radius: 18px;
+            display: inline-block;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+            margin-bottom: 18px;
+        }
+        .qr-wrapper img {
+            width: 210px;
+            height: 210px;
+            display: block;
+            border-radius: 8px;
+        }
 
         .status-badge {
             display: inline-flex;
             align-items: center;
-            gap: 6px;
-            padding: 6px 14px;
-            border-radius: 20px;
-            font-size: 0.8rem;
+            gap: 8px;
+            padding: 8px 18px;
+            border-radius: 30px;
+            font-size: 0.82rem;
             font-weight: 700;
-            margin-top: 12px;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid var(--border);
+            transition: all 0.3s ease;
         }
-        .status-PENDING { color: var(--warning); border-color: rgba(245, 158, 11, 0.3); background: rgba(245, 158, 11, 0.1); }
-        .status-SUCCESS { color: var(--success); border-color: rgba(16, 185, 129, 0.3); background: rgba(16, 185, 129, 0.1); }
-        .status-TAMPERED { color: var(--danger); border-color: rgba(239, 68, 68, 0.3); background: rgba(239, 68, 68, 0.1); }
-
-        .live-log {
-            width: 100%;
-            background: #050811;
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 10px;
-            font-family: monospace;
-            font-size: 0.72rem;
+        .status-PENDING {
+            color: #fcd34d;
+            background: rgba(245, 158, 11, 0.12);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+        }
+        .status-SUCCESS {
             color: #6ee7b7;
-            text-align: left;
-            margin-top: 16px;
-            max-height: 120px;
-            overflow-y: auto;
+            background: rgba(16, 185, 129, 0.15);
+            border: 1px solid rgba(16, 185, 129, 0.35);
+        }
+        .status-TAMPERED {
+            color: #fca5a5;
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid rgba(239, 68, 68, 0.35);
         }
 
-        .empty-state { color: var(--muted); font-size: 0.85rem; }
+        .spinner {
+            width: 12px;
+            height: 12px;
+            border: 2px solid currentColor;
+            border-bottom-color: transparent;
+            border-radius: 50%;
+            display: inline-block;
+            animation: rotation 1s linear infinite;
+        }
+        @keyframes rotation { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        .app-icons {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            margin-top: 20px;
+            font-size: 0.72rem;
+            color: var(--muted);
+        }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <!-- Left: Request Form -->
-    <div class="card">
-        <h2>⚡ Create Payment Request</h2>
-        <p class="subtitle">Client App / Website sending payment amount request</p>
-        
-        <form id="payForm">
-            <div class="form-group">
-                <label>Gateway Endpoint</label>
-                <input type="text" id="gatewayUrl" value="https://paytmgateway.dcodesharvi.workers.dev" required>
-            </div>
-
-            <div class="form-group">
-                <label>Payment Amount (₹)</label>
-                <input type="number" id="amount" step="0.01" value="1.00" placeholder="Enter amount e.g. 499.00" required style="font-size: 1.1rem; font-weight: 700; color: #7dd3fc;">
-            </div>
-
-            <button type="submit" class="btn">🚀 Request Payment QR (₹<span id="btnAmount">1.00</span>)</button>
-        </form>
+<div class="pay-card">
+    <div class="brand-header">
+        <div class="brand-icon">⚡</div>
+        <div class="brand-name">Aurora Pay</div>
     </div>
 
-    <!-- Right: Generated QR & Live Verification Status -->
-    <div class="card payment-box">
-        <h2>📱 Scan & Pay</h2>
-        <p class="subtitle" id="paymentInstruction">Enter amount and click request</p>
+    <div class="amount-display">
+        <div class="amount-label" id="shopName">Payment Amount</div>
+        <div class="amount-val" id="displayAmount">₹1.00</div>
+    </div>
 
-        <div class="empty-state" id="emptyState">
-            <div>📲</div>
-            <p>QR Code will be generated from Admin Panel Settings</p>
+    <div class="qr-wrapper">
+        <img id="qrImg" src="https://api.qrserver.com/v1/create-qr-code/?size=280x280&data=loading" alt="UPI QR Code">
+    </div>
+
+    <div>
+        <div class="status-badge status-PENDING" id="statusBadge">
+            <span class="spinner" id="statusSpinner"></span>
+            <span id="statusText">Scan QR using any UPI App</span>
         </div>
+    </div>
 
-        <div class="qr-frame" id="qrFrame">
-            <canvas id="qrCanvas"></canvas>
-        </div>
-
-        <div id="statusContainer" style="display:none;">
-            <div class="status-badge status-PENDING" id="statusBadge">● Waiting for Payment...</div>
-            <p style="font-size: 0.78rem; color: var(--muted); margin-top: 8px;">Auto-verifying status every 3 seconds...</p>
-        </div>
-
-        <div class="live-log" id="liveLog">Logs will appear here...</div>
+    <div class="app-icons">
+        Paytm • PhonePe • Google Pay • BHIM
     </div>
 </div>
 
 <script>
-    // Auto generate Order ID
-    document.getElementById('orderId').value = 'ORD_' + Date.now().toString().slice(-6);
+    const baseUrl = 'https://paytmgateway.dcodesharvi.workers.dev';
+    const amount = '1.00'; // Target transaction amount
 
     let pollInterval = null;
 
-    function log(msg) {
-        const logBox = document.getElementById('liveLog');
-        const time = new Date().toLocaleTimeString();
-        logBox.innerHTML += `<div>[${time}] ${msg}</div>`;
-        logBox.scrollTop = logBox.scrollHeight;
-    }
-
-    document.getElementById('amount').addEventListener('input', function(e) {
-        document.getElementById('btnAmount').innerText = parseFloat(e.target.value || 0).toFixed(2);
-    });
-
-    let currentMid = '';
-
-    document.getElementById('payForm').addEventListener('submit', async function(e) {
-        e.preventDefault();
-        
-        const baseUrl = document.getElementById('gatewayUrl').value.replace(/\/$/, '');
-        const amount = parseFloat(document.getElementById('amount').value).toFixed(2);
-
-        log(`Sending amount request ₹${amount} to Gateway API (${baseUrl}/api/create-order)...`);
-
+    async function initPayment() {
         try {
-            // Call gateway backend API to create order & generate QR using Admin Panel settings
-            const apiRes = await fetch(`${baseUrl}/api/create-order`, {
+            // Request dynamic QR from backend
+            const res = await fetch(`${baseUrl}/api/create-order`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ amount: amount })
             });
+            const data = await res.json();
 
-            const orderData = await apiRes.json();
-            if (!orderData.success) {
-                log(`❌ Failed to create payment order: ${orderData.message || 'Unknown error'}`);
-                return;
+            if (data.success) {
+                document.getElementById('qrImg').src = data.qr_image_url;
+                document.getElementById('displayAmount').innerText = '₹' + parseFloat(data.amount).toFixed(2);
+                if (data.shop_name) document.getElementById('shopName').innerText = data.shop_name;
+
+                // Start polling verification status
+                startStatusPolling(data.mid, data.order_id, data.amount);
             }
-
-            currentMid = orderData.mid;
-            const createdOrderId = orderData.order_id;
-            log(`✅ Gateway created Order #${createdOrderId} using Admin MID (${orderData.mid}) & UPI (${orderData.upi_id})`);
-
-            // Render QR Code Image returned by Gateway
-            document.getElementById('emptyState').style.display = 'none';
-            const qrFrame = document.getElementById('qrFrame');
-            qrFrame.style.display = 'block';
-            qrFrame.innerHTML = `<img src="${orderData.qr_image_url}" alt="UPI QR" style="width:200px; height:200px; display:block; border-radius:8px;">`;
-
-            document.getElementById('paymentInstruction').innerText = `Scan & pay ₹${amount} for Order #${createdOrderId} (${orderData.shop_name})`;
-            document.getElementById('statusContainer').style.display = 'block';
-
-            // Start polling verification status
-            startStatusPolling(baseUrl, currentMid, createdOrderId, amount);
-
         } catch (err) {
-            log(`❌ Request Error: ${err.message}`);
+            console.error(err);
         }
-    });
+    }
 
-    function startStatusPolling(baseUrl, mid, orderId, amount) {
+    function startStatusPolling(mid, orderId, amount) {
         if (pollInterval) clearInterval(pollInterval);
-
-        log(`Started polling verification status every 3s...`);
 
         pollInterval = setInterval(async () => {
             try {
                 const res = await fetch(`${baseUrl}/api/check-status`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        mid: mid,
-                        order_id: orderId,
-                        expected_amount: amount
-                    })
+                    body: JSON.stringify({ mid: mid, order_id: orderId, expected_amount: amount })
                 });
-
                 const data = await res.json();
-                log(`Status Response: ${JSON.stringify(data)}`);
-
                 const badge = document.getElementById('statusBadge');
+                const text = document.getElementById('statusText');
+                const spinner = document.getElementById('statusSpinner');
 
                 if (data.status === 'TXN_SUCCESS') {
                     badge.className = 'status-badge status-SUCCESS';
-                    badge.innerText = '✅ Payment Verified Successfully!';
-                    log('🎉 Transaction verified! Payment Complete.');
+                    text.innerText = '✅ Payment Verified!';
+                    spinner.style.display = 'none';
                     clearInterval(pollInterval);
                 } else if (data.status === 'TAMPERED_PARTIAL') {
                     badge.className = 'status-badge status-TAMPERED';
-                    badge.innerText = `⚠️ Amount Tampered (Recv: ₹${data.received_amount})`;
-                    log('🚨 Warning: Tampered or Partial payment received!');
+                    text.innerText = `⚠️ Amount Tampered (₹${data.received_amount})`;
+                    spinner.style.display = 'none';
                     clearInterval(pollInterval);
-                } else {
-                    badge.className = 'status-badge status-PENDING';
-                    badge.innerText = '● Pending payment scan...';
                 }
-            } catch (err) {
-                log(`Fetch error: ${err.message}`);
-            }
+            } catch (e) {}
         }, 3000);
     }
+
+    // Auto start
+    initPayment();
 </script>
 
 </body>
